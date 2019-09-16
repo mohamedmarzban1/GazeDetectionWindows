@@ -3,12 +3,17 @@ from shutil import copyfile
 
 # --- CONSTANTS --- #
 
-LF_FOLDER = "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14/LF 2019-6-14"
-G_FOLDER = "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14/G2019-6-14"
-FE_FOLDER = "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14/FE2019-6-14"
+LF_FOLDER = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/Labeled data Face/LF 2019-7-23"
+G_FOLDER = "G:/FixedGazeImages/Gaze points Data/G2019-7-23"
+FE_FOLDER = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas\ADAS data/FaceAndEyes/FE2019-7-23"
 
-OUTPUT_DIR = "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14 - Copy"
- 
+OUTPUT_DIR = "G:/CorrectedOutput"
+G_NEW_Folder = "G2019-7-23"
+LF_NEW_FOLDER = "LF 2019-7-23"
+
+FE_NEW_Folder = "FE2019-7-23"
+LAST_FRAME_PRE_NONE = 52  # last value before none
+FIRST_FRAME_POST_NONE = 120  # first value after none sequence
 
 # --- END CONSTANTS -- #
 
@@ -65,12 +70,12 @@ def correct_files(path, output_dir, from_frame, gap_end_frame, hasU=False):
 
 def main():
     print("Processing G Folder")
-    correct_files(G_FOLDER, OUTPUT_DIR + '/G2019-6-14', 52, 101)
+    correct_files(G_FOLDER, OUTPUT_DIR + '/'+ G_NEW_Folder, LAST_FRAME_PRE_NONE, FIRST_FRAME_POST_NONE)
 
     print("Processing LF Folder")
     for tag in os.listdir(LF_FOLDER):
         print("LF/", tag)
-        correct_files(LF_FOLDER + '/' + tag, OUTPUT_DIR + '/LF 2019-6-14/' + tag, 52, 101)
+        correct_files(LF_FOLDER + '/' + tag, OUTPUT_DIR + '/'+ LF_NEW_FOLDER +'/' + tag, LAST_FRAME_PRE_NONE, FIRST_FRAME_POST_NONE)
 
     print("Processing FE folder")
     for tag in os.listdir(FE_FOLDER):
@@ -80,7 +85,7 @@ def main():
         for category in os.listdir(FE_FOLDER + '/' + tag):
             print("FE/", tag, "/", category)
             correct_files(FE_FOLDER + '/' + tag + '/' + category,
-                            OUTPUT_DIR + '/FE2019-6-14/' + tag + '/' + category, 52, 101, True)
+                            OUTPUT_DIR + '/' + FE_NEW_Folder + '/' + tag + '/' + category, LAST_FRAME_PRE_NONE, FIRST_FRAME_POST_NONE, True)
 
 
 main()

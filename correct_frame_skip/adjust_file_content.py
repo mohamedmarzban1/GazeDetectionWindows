@@ -4,11 +4,13 @@ import pandas as pd
 
 # --- CONSTANTS --- #
 
-ID_FILE = "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14 - Copy/FE2019-6-14/id.csv"
-ANGLES_ID = "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14 - Copy/FE2019-6-14/AnglesIDFile.csv"
+ID_FILE = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-7-23Old/id.csv"
+ANGLES_ID = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-7-23Old/AnglesIDFile.csv"
+OPT_ID_FILE = "G:/CorrectedOutput/FE2019-7-23/id.csv"
+OPT_ANGLES_ID = "G:/CorrectedOutput/FE2019-7-23/AnglesIDFile.csv"
 
 LAST_FRAME_PRE_NONE = 52  # last value before none
-FIRST_FRAME_POST_NONE = 101  # first value after none sequence
+FIRST_FRAME_POST_NONE = 120  # first value after none sequence
 
 # --- END CONSTANTS -- #
 
@@ -93,10 +95,8 @@ def correct_angles_file(path, output_path, from_frame, gap_end_frame):
 
 
 def main():
-    correct_id_file(ID_FILE, "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14 - Copy/FE2019-6-14/id - Copy.csv",
-                    LAST_FRAME_PRE_NONE, FIRST_FRAME_POST_NONE)
-    correct_angles_file(ANGLES_ID, "C:/Users/aps170830/Desktop/naofal-lab/data/2019-6-14 - Copy/FE2019-6-14/AnglesIDFile - Copy.csv",
-                        LAST_FRAME_PRE_NONE, FIRST_FRAME_POST_NONE)
+    correct_id_file(ID_FILE, OPT_ID_FILE, LAST_FRAME_PRE_NONE, FIRST_FRAME_POST_NONE)
+    correct_angles_file(ANGLES_ID, OPT_ANGLES_ID, LAST_FRAME_PRE_NONE, FIRST_FRAME_POST_NONE)
 
 
 main()

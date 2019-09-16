@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Fri Sep 13 15:49:30 2019
+
+@author: mfm160330
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Sep  9 13:47:48 2019
 
 @author: mfm160330
@@ -12,7 +19,7 @@ import numpy as np
 
 
 
-def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
+def AugmentData(row, num):
     ImageID = str(row['ImageID'])
     ImagePath = str(row['ImagePath'])
     Face_array = cv2.imread(os.path.join(ImagePath,'Face','F'+ImageID) )  # convert to array                
@@ -21,52 +28,65 @@ def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
     
     row['ImagePath'] = AugmentedDataLoc
     
-    Face_HSV = cv2.cvtColor(Face_array, cv2.COLOR_BGR2HSV)
-    Left_HSV = cv2.cvtColor(Left_array, cv2.COLOR_BGR2HSV)
-    Right_HSV = cv2.cvtColor(Right_array, cv2.COLOR_BGR2HSV)
+    #cv2.imwrite(AbsWriteLocSubF + "/F"+ImageID[:-4] + "Aug%03d.jpg" %  (count), faceArrayAug)
+    #cv2.imwrite(AbsWriteLocSubL + "/L"+ImageID[:-4] + "Aug%03d.jpg" %  (count), LeftArrayAug)
+    #cv2.imwrite(AbsWriteLocSubR + "/R"+ImageID[:-4] + "Aug%03d.jpg" %  (count), RightArrayAug)
+    
+    try:
+        Face_HLS = cv2.cvtColor(Face_array,cv2.COLOR_RGB2HLS)  ## Convert Face RGB image to HLS 
+        Left_HLS = cv2.cvtColor(Left_array,cv2.COLOR_RGB2HLS)  ## Convert left eye RGB image to HLS 
+        Right_HLS = cv2.cvtColor(Right_array,cv2.COLOR_RGB2HLS)  ## Convert right eye RGBimage to HLS
+    except: 
+        zz =1
+        print("couldn't convert\n")
+        
+        
+    
+    #Face_HLS = np.array(Face_HLS, dtype = np.float64)
+    #Left_HLS = np.array(Left_HLS, dtype = np.float64)
+    #Right_HLS = np.array(Right_HLS, dtype = np.float64)
+
     
     random_FaceCrop_coefficient = np.random.randint(low = 1, high = 5, size = num) ## generates random integer vales from 1 to 5
     random_EyeCrop_coefficient = np.random.randint(low = 1, high = 2, size = num) ## generates random integer vales from 1 to 3
-    #random_brightness_coefficient = np.random.uniform(low = 0.95, high = 1.05 , size = num)   ## generates value between 0.95 and 1.05
-    br_add_rand = np.random.randint(low = -br_add, high = br_add, size = num) #random brightness additive
-    br_scale_rand = np.random.uniform(low =1-br_scale, high=1+br_scale, size = num) #random brightness scale
-    sat_add_rand = np.random.randint(low = -br_add, high = br_add, size = num) #random saturation additive
-    sat_scale_rand = np.random.uniform(low =1-sat_scale, high=1+sat_scale, size = num) #random saturation scale
+    random_brightness_coefficient = np.random.uniform(low = 0.95, high = 1.05 , size = num)   ## generates value between 0.95 and 1.05
+    
     count = 0
-    maxLim = 255
-    minLim = 0
     for i1 in range(num):
         
-        # face augmentation
-        Face_HSV = Face_HSV[random_FaceCrop_coefficient[i1]:] #Face_array[vCropS:vCropE, hCropS:hCropE]
-        h, s, v = cv2.split(Face_HSV)
-        v = np.clip((v * br_scale_rand[i1]) + br_add_rand[i1], minLim, maxLim, out = v)
-        s = np.clip((s * sat_scale_rand[i1]) + sat_add_rand[i1], minLim, maxLim, out = s)        
-        Face_hsv_editted = cv2.merge((h, s, v))
-        Face_RGB = cv2.cvtColor(Face_hsv_editted, cv2.COLOR_HSV2BGR)
+        Face_HLS = Face_HLS[random_FaceCrop_coefficient[i1]:] #Face_array[vCropS:vCropE, hCropS:hCropE]
+        Left_HLS = Left_HLS [random_EyeCrop_coefficient[i1]:] 
+        Right_HLS = Right_HLS [random_EyeCrop_coefficient[i1]:]
         
-        #left eye augmentation
-        Left_HSV = Left_HSV[random_EyeCrop_coefficient[i1]:] #Face_array[vCropS:vCropE, hCropS:hCropE]
-        h_l, s_l, v_l = cv2.split(Left_HSV)        
-        v_l = np.clip((v_l * br_scale_rand[i1])+br_add_rand[i1], minLim, maxLim, out=v_l)
-        s_l = np.clip((s_l * sat_scale_rand[i1]) + sat_add_rand[i1], minLim, maxLim, out = s_l)
-        Left_hsv_editted = cv2.merge((h_l, s_l, v_l))
-        Left_RGB = cv2.cvtColor(Left_hsv_editted, cv2.COLOR_HSV2BGR)
-        
-        # right eye augmentation
-        Right_HSV = Right_HSV[random_EyeCrop_coefficient[i1]:] #Face_array[vCropS:vCropE, hCropS:hCropE]
-        h_r, s_r, v_r = cv2.split(Right_HSV)        
-        v_r = np.clip((v_r * br_scale_rand[i1])+br_add_rand[i1], minLim, maxLim, out=v_r)
-        s_r = np.clip((s_r * sat_scale_rand[i1]) + sat_add_rand[i1], minLim, maxLim, out = s_r)
-        Right_hsv_editted = cv2.merge((h_r, s_r, v_r))
-        Right_RGB = cv2.cvtColor(Right_hsv_editted, cv2.COLOR_HSV2BGR)        
+        Face_HLS = np.array(Face_HLS, dtype = np.float64)
+        Left_HLS = np.array(Left_HLS, dtype = np.float64)
+        Right_HLS = np.array(Right_HLS, dtype = np.float64)
+
+        Face_HLS[:,:,1] = Face_HLS[:,:,1]*random_brightness_coefficient[i1] ## scale pixel values up or down for channel 1(Lightness)
+        Face_HLS[:,:,1][Face_HLS[:,:,1]>255]  = 255 ##Sets all values above 255 to 255    
+        Face_HLS = np.array(Face_HLS, dtype = np.uint8)    
+        Face_RGB = cv2.cvtColor(Face_HLS, cv2.COLOR_HLS2RGB) ## Conversion to RGB    
+    
+        Left_HLS[:,:,1] = Left_HLS[:,:,1]*random_brightness_coefficient[i1] ## scale pixel values up or down for channel 1(Lightness)
+        Left_HLS[:,:,1][Left_HLS[:,:,1]>255]  = 255 ##Sets all values above 255 to 255    
+        Left_HLS = np.array(Left_HLS, dtype = np.uint8)    
+        Left_RGB = cv2.cvtColor(Left_HLS, cv2.COLOR_HLS2RGB) ## Conversion to RGB    
+    
+        Right_HLS[:,:,1] = Right_HLS[:,:,1]*random_brightness_coefficient[i1] ## scale pixel values up or down for channel 1(Lightness)
+        Right_HLS[:,:,1][Right_HLS[:,:,1]>255]  = 255 ##Sets all values above 255 to 255    
+        Right_HLS = np.array(Right_HLS, dtype = np.uint8)    
+        Right_RGB = cv2.cvtColor(Right_HLS, cv2.COLOR_HLS2RGB) ## Conversion to RGB   
         
         ImageIDNew = ImageID[:-4] + "Aug%03d.jpg" %  (count)
         row['ImageID'] = ImageIDNew
 
+        
+    
         cv2.imwrite(AbsWriteLocSubF + "/F" + ImageIDNew, Face_RGB) 
         cv2.imwrite(AbsWriteLocSubL + "/L" + ImageIDNew, Left_RGB) 
         cv2.imwrite(AbsWriteLocSubR + "/R" + ImageIDNew, Right_RGB) 
+        
+        
         
         count = count + 1
         with open(NewAugmentedFile, 'a+') as csv_output:
@@ -79,13 +99,8 @@ def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
 ###========== Intialize parameters ==============###
 InputFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseNine.csv" ##input
 NewAugmentedFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/AugmentedNine.csv" ##output
-AugmentedDataLoc = "G:/AugmnetedHSV/"
+AugmentedDataLoc = "G:/AugmentedHSV/"
 AugmentTimes = [13,6,2,0,0,0,0,0,0,1,2,7,11,19]
-brightness_additive_max = 10
-brightness_scale_max = 0.05
-sat_add_max = 10
-sat_scale_max = 0.05
-#Sat_Max_val = 30
 ###==============================================###
 FolderNames = ['Face', 'Leye', 'Reye']
 
@@ -113,6 +128,7 @@ for f in FolderNames:
 
 #=======  =====#
 for indx in range(numRowsInput): 
+    num = 0
     row = AllLabeledImagesFile[indx]
     with open(NewAugmentedFile, 'a+') as csv_output:
         filewriter = csv.writer(csv_output, delimiter='\t', quotechar='|', quoting=csv.QUOTE_MINIMAL)            
@@ -120,9 +136,20 @@ for indx in range(numRowsInput):
     Elev = float(row['Elev'])
     Azim = float(row['Azim'])
     ElevClass = int(row['ElevClass'])
-    num = AugmentTimes[ElevClass]
+    if Elev<=76 or Elev>=96:
+        num = 5
+    elif Elev < 78:
+        num = 4
+    elif Elev > 94:
+        num = 3
+    elif (Azim<-40 and Azim>-38):
+        num = 2    
+    elif Elev> 90 or Elev< 80 or Azim >18  or Azim<-40:
+        num = 1 
+    #num = AugmentTimes[ElevClass]
+    
     if num > 0:
-        AugmentData(row, num, brightness_additive_max, brightness_scale_max, sat_add_max, sat_scale_max)
+        AugmentData(row, num)
         
         
         

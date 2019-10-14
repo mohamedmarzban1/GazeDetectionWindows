@@ -11,6 +11,10 @@ import csv
 import cv2
 import os
 from random import shuffle 
+import re # for spliting with multiple delimeters
+import scipy.io as sio
+import numpy.matlib
+
 
 
 
@@ -18,6 +22,15 @@ def TemporalEstimation(y_soft):
     #num_prev = y_soft.shape[0]
     #numClasses = y_soft.shape[1]
     y_soft_predicted = np.average(y_soft, axis = 0) # predicted soft angle
+    return y_soft_predicted
+
+# a function that performs temporal estimation through exponential forgetting factor weights
+def TempEstForgetFactor(y_soft, beta = 0.95):
+    num_frame = y_soft.shape[0] # num_frame = num_prev + 1
+    W_i = np.expand_dims (np.power(beta,np.arange(0, num_frame)), axis =0) # weights
+    W_i_sum = np.sum(W_i)
+    #W_i = np.matlib.repmat(W_i, numClasses, 1 ).T
+    y_soft_predicted = np.matmul(W_i,y_soft)/W_i_sum # predicted soft angle
     return y_soft_predicted
     
     
@@ -32,7 +45,7 @@ def getImageIDfromList(ImageID,ImageCount,i):
                 print("GotImageFromList", '\n')
                 return ID_t[2]
 
-    print("====================image Not found====================================", '\n')
+    print("==================== image Not found ====================================", '\n')
     return 2
 
 #======= A function that takes the imageID and the index of the previous temporal image and returns the new ID
@@ -91,19 +104,25 @@ def MyPrepareDataTemporal(elligibleImageID, num_prev):
 def extractElligibleTemporalFrames(TestIDs, num_prev):
     elligibleImageIDs = []
     count = 0
-    ImageCountPrev = -1
+    frameCountPrev = -1 # to check for num_prev
+    lastEligFrameNum = -10 # last Eligible frame number ## to check for ContDownSample
     for i, ID in enumerate(TestIDs):
-        imageCount = ID[7]
-        imageCount = int(imageCount)
-        if imageCount-ImageCountPrev  == 1:
+        ImageID = str(ID[2])
+        TmpSplit = ImageID.split("_f")
+        #frameCount = int(TmpSplit[1].split(fileType)[0])
+        frameCountTmp = re.split(fileTypes,TmpSplit[1])
+        frameCount = int(frameCountTmp[0])
+        
+        if frameCount-frameCountPrev  == 1:
             count = count + 1
         else:
             count = 0
         
-        if count > num_prev:
+        if count > num_prev and frameCount-lastEligFrameNum >= ContDownSample:
             elligibleImageIDs.append(ID)
+            lastEligFrameNum = frameCount
         
-        ImageCountPrev = imageCount
+        frameCountPrev = frameCount
     
     return elligibleImageIDs
 
@@ -145,6 +164,7 @@ def AccHigestN(y_truth, y_pred_soft,N):
                 maxIndx[i1] = i2
                 maxConfidence[i1] = confidence
                 
+                
         maxConf_sep[i1,:] = y_pred_soft[i1, np.arange(maxIndx[i1],maxIndx[i1]+N)]
         
         if maxIndx[i1]<=y_truth[i1]<+maxIndx[i1]+N:
@@ -153,30 +173,29 @@ def AccHigestN(y_truth, y_pred_soft,N):
     return CorrCount/numTestSamples
  
 #=============Intialize Parameters =================#    
-SavedModel = 'mySavedModels/run9.h5'
-testDataSetFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseTemp2019-7-23.csv'  #DenseTemp2019-7-10.csv #DenseTest2019-5-30Fixed.csv'
+SavedModel = 'mySavedModels/run15SimpleNetwork.h5'
+testDataSetFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseNineV3TestTemporalNotDownsampled.csv'  #DenseTemp2019-7-10.csv #DenseTest2019-5-30Fixed.csv'
+# a Non-downsampled ID file should be used here
 
-FaceResize = 224
-EyeResize = 224
-MyBatchSize =32
-numTestSamples = 2000
+numTestSamples = 10000
 #========== temporal Correlation parameters ===============#
-num_prev = 30 # number of previous frames used to account for temporal correlation
+num_prev = 20 # number of previous frames used to account for temporal correlation
+SaveFileName = 'LdSvdTemprun15Exp20Beta0.8'
+ContDownSample = 4  # To make sure we don't test very similar frames (Each two franmes to be tested have to be at least ContDownSample frames apart)
+beta = 0.8
 
 #======= Dense classificiation and temporal Parameters ==========#
-numElevClasses = 20 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
-numAzimClasses = 52 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
+numElevClasses = 14 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
+numAzimClasses = 38 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
 softLabels = 1 #transform the hard labels into soft ones to penalize errors differently 
 IsEyes = 1
+fileTypes = '.jpg|.png'
+
+FaceResize = 224
+EyeResize = 64
+MyBatchSize = 32
 
 
-
-#=========== load model =================#
-model_final = load_model(SavedModel)
-print('finished loading model \n')
-##### summarize model
-#model_final.summary()
-#===========================================================#
 
 
 ##============== load dataset ================##
@@ -189,18 +208,28 @@ with open(testDataSetFile, "r") as csvfile:
        if not ''.join(row).strip():
            continue # ignore the blank lines
        TestIDs.append(row)
-#shuffle(TestIDs)
-#TestIDs = TestIDs[0:500] #Commment me later
 ##============================================##
+       
 
 
 #====== Test temporal (each frame and its separate images separetly) =====#
 y_Elev_truth, y_Azim_truth = [], []
 elligibleImageIDs = extractElligibleTemporalFrames(TestIDs, num_prev) 
 shuffle(elligibleImageIDs)
-elligibleImageIDs = elligibleImageIDs[0:numTestSamples]
-
+NumIDs = min(numTestSamples, len(elligibleImageIDs))
+print("Number of Elligible IDs = ", NumIDs, "\n")
+elligibleImageIDs = elligibleImageIDs[0:NumIDs]
 numEligibleIDs = len(elligibleImageIDs)
+
+#=========== load model =================#
+model_final = load_model(SavedModel)
+print('finished loading model \n')
+##### summarize model
+#model_final.summary()
+#===========================================================#
+
+
+#=============Testing =============================#
 y_Elev_soft_t = np.empty([numEligibleIDs, numElevClasses]) # Soft Elevation estimation with temporal
 y_Azim_soft_t = np.empty([numEligibleIDs, numAzimClasses])
 y_Elev_soft = np.empty([numEligibleIDs, numElevClasses]) # soft Elevation estimation
@@ -208,8 +237,8 @@ y_Azim_soft = np.empty([numEligibleIDs, numAzimClasses])
 for i in range(numEligibleIDs):
     X_F_test_b, X_R_test_b, X_L_test_b, y_Elev_truth_b, y_Azim_truth_b, ImageIDList = MyPrepareDataTemporal(elligibleImageIDs[i], num_prev) # data of all the temporal segment
     [y_Elev_soft_b, y_Azim_soft_b] = model_final.predict([X_F_test_b, X_R_test_b, X_L_test_b]) # predicting values for all batch
-    y_Elev_soft_t[i] = TemporalEstimation(y_Elev_soft_b) # Predicted elevation angle estimation for the eligible frame after temporal combinning
-    y_Azim_soft_t[i] = TemporalEstimation(y_Azim_soft_b) # Predicted azimuth angle estimation for the eligible frame after temporal combinning
+    y_Elev_soft_t[i] = TempEstForgetFactor(y_Elev_soft_b, beta)#TemporalEstimation(y_Elev_soft_b) # Predicted elevation angle estimation for the eligible frame after temporal combinning
+    y_Azim_soft_t[i] = TempEstForgetFactor(y_Azim_soft_b, beta)#TemporalEstimation(y_Azim_soft_b) # Predicted azimuth angle estimation for the eligible frame after temporal combinning
     y_Elev_truth.append(float(y_Elev_truth_b[0]))
     y_Azim_truth.append(float(y_Azim_truth_b[0]))
     y_Elev_soft[i] = y_Elev_soft_b[0]
@@ -222,6 +251,10 @@ y_Elev_pred_t = np.argmax(y_Elev_soft_t, axis=1) # predicted Elevation Angle wit
 y_Azim_pred_t = np.argmax(y_Azim_soft_t, axis=1) 
 y_Elev_pred = np.argmax(y_Elev_soft, axis=1) # predicted Elevation Angle normally
 y_Azim_pred = np.argmax(y_Azim_soft, axis=1)
+
+
+sio.savemat(SaveFileName,{'y_Elev_truth':y_Elev_truth,'y_Elev_soft':y_Elev_soft,'y_Azim_truth':y_Azim_truth,'y_Azim_soft':y_Azim_soft, 'y_Elev_soft_t':y_Elev_soft_t, 'y_Azim_soft_t':y_Azim_soft_t, 'beta':beta})
+
 
 # accuracy for temporal
 ElevAccuracy_t = AccuracyCal(y_Elev_truth, y_Elev_pred_t)

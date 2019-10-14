@@ -10,11 +10,15 @@ import os
 import pandas as pd
 import csv
 
+#####CHANGE 
 
 #===== Intialize parameters ============#
-InputIdFilePath = "G:/ContGazeImages/FaceAndEyes/CFE2019-7-19/CFE2019-7-19FinalFormatIDFile.csv"  #input
-ImageReadLocation = "G:/ContGazeImages/FaceAndEyes/CFE2019-7-19/Face" #input
-IDFileCleaned = "G:/ContGazeImages/FaceAndEyes/CFE2019-7-19/CFE2019-7-19IDFileCleaned.csv" #output
+FolderPath = "G:/ContGazeImages/FaceAndEyes/CFE2019-7-19"
+InputIdFilePath = FolderPath + "/AnglesIDfileBeforeLeftCleanning.csv"  #input
+#=========================================
+
+ImageReadLocation = FolderPath + "/Leye" #Face" #input
+IDFileCleaned = FolderPath+ "/AnglesIDfile.csv" #output
 
 
 #====== Open the cleaned ID file =========#
@@ -31,7 +35,7 @@ numRowsInput = AllLabeledImagesFile.shape[1]
 for indx in range(numRowsInput): 
     row = AllLabeledImagesFile[indx]
     ImageID = str(row['ImageID'])
-    filename = ImageReadLocation +"/F" + ImageID
+    filename = ImageReadLocation +"/L"+ImageID  #"/F" + ImageID
     FileExists = os.path.isfile(filename)
     if FileExists:
         with open(IDFileCleaned, 'a+') as csv_output:

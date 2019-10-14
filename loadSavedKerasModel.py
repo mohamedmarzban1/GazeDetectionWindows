@@ -20,7 +20,7 @@ def MyPrepareData (batch_IDs):
 
     X_Face, X_LEye, X_REye = [], [], [] 
     y_Elev, y_Azim = [], [], 
-    for DataSetID, ImagePath, ImageID, ElevClass, AzimClass in batch_IDs:
+    for DataSetID, ImagePath, ImageID, ElevClass, AzimClass, _, _ in batch_IDs:
         FullFaceID = ImagePath+'/Face/'+'F'+ImageID
         Face_array = cv2.imread(FullFaceID)  # convert to array
         #if Face_array == None:
@@ -89,26 +89,25 @@ def AccHigestN(y_truth, y_pred_soft,N):
     return CorrCount/numTestSamples
     
             
-            
-        
-        
-    
 
 #### 
-SavedModel = 'mySavedModels/run9.h5'
-testDataSetFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseTest2019-7-23Cont.csv'#DenseTest2019-5-30Fixed.csv'
+SavedModel = 'mySavedModels/run15SimpleNetwork.h5'
+testDataSetFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseNineTestV3.csv'#DenseTest2019-5-30Fixed.csv'
 
 FaceResize = 224
-EyeResize = 224
-MyBatchSize =32
+EyeResize = 64
+MyBatchSize = 32
+NumUsedTest = 2000 # number of test samples
+
 
 #==== Dense classificiation Parameters ======#
-numElevClasses = 20 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
-numAzimClasses = 52 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
+numElevClasses = 14 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
+numAzimClasses = 38 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
 softLabels = 1 #transform the hard labels into soft ones to penalize errors differently 
 IsEyes = 1
 
 # load model
+print('Started loading Model \n')
 model_final = load_model(SavedModel)
 print('finished loading model \n')
 # summarize model
@@ -124,7 +123,7 @@ with open(testDataSetFile, "r") as csvfile:
            continue # ignore the blank lines
        TestIDs.append(row)
 shuffle(TestIDs)
-TestIDs = TestIDs[0:500] #Commment me later
+#TestIDs = TestIDs[0:NumUsedTest] 
 
 # Test in batches
 
@@ -189,4 +188,15 @@ print("Azimuth Accuracy 10deg resolution = ", Azim_acc_highest5, "\n")
 
 
 
+Elev_acc_highest6 = AccHigestN (y_Elev_truth, y_Elev_soft,6)
+print("Elevation Accuracy 12deg resolution = ", Elev_acc_highest6, "\n")
 
+Azim_acc_highest6 = AccHigestN (y_Azim_truth, y_Azim_soft,6)
+print("Azimuth Accuracy 12deg resolution = ", Azim_acc_highest6, "\n")
+
+
+Elev_acc_highest7 = AccHigestN (y_Elev_truth, y_Elev_soft,7)
+print("Elevation Accuracy 14deg resolution = ", Elev_acc_highest7, "\n")
+
+Azim_acc_highest7 = AccHigestN (y_Azim_truth, y_Azim_soft,8)
+print("Azimuth Accuracy 12deg resolution = ", Azim_acc_highest7, "\n")

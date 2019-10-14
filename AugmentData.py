@@ -11,6 +11,13 @@ import cv2
 import numpy as np
 
 
+### ==== A function that checks if a label is present in a list ==== ###
+def MyListCheck (MyList, value):
+    for x in MyList:
+        if x == value:
+            return True
+    return False
+
 
 def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
     ImageID = str(row['ImageID'])
@@ -77,10 +84,9 @@ def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
     return 
 
 ###========== Intialize parameters ==============###
-InputFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseNine.csv" ##input
-NewAugmentedFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/AugmentedNine.csv" ##output
-AugmentedDataLoc = "G:/AugmnetedHSV/"
-AugmentTimes = [13,6,2,0,0,0,0,0,0,1,2,7,11,19]
+InputFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseNineV3Exclude2Labels.csv" ##input
+NewAugmentedFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/AugmentedNineV3.csv" ##output
+AugmentedDataLoc = "G:/AugmnetedHSVv3/"
 brightness_additive_max = 10
 brightness_scale_max = 0.05
 sat_add_max = 10
@@ -110,7 +116,7 @@ for f in FolderNames:
     except OSError:  
         print("Creation of the directory %s failed" % AugmentedDataLoc)
         
-
+num = 0
 #=======  =====#
 for indx in range(numRowsInput): 
     row = AllLabeledImagesFile[indx]
@@ -120,7 +126,17 @@ for indx in range(numRowsInput):
     Elev = float(row['Elev'])
     Azim = float(row['Azim'])
     ElevClass = int(row['ElevClass'])
-    num = AugmentTimes[ElevClass]
+    AzimClass = int(row['AzimClass'])
+    if ElevClass == 0:
+        num = 8
+    elif ElevClass == 1:
+        num = 5
+    elif ElevClass == 2 or ElevClass == 12:
+        num = 3
+    elif ElevClass == 11 or MyListCheck ([2,3,5,6,7,8,33,34,35,36,37], AzimClass):
+        num = 1
+    #num = AugmentTimes[ElevClass]
+    
     if num > 0:
         AugmentData(row, num, brightness_additive_max, brightness_scale_max, sat_add_max, sat_scale_max)
         

@@ -10,18 +10,19 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras import optimizers
 from keras.models import Sequential, Model 
 from keras.utils.vis_utils import plot_model
-from keras.layers import Dropout, Flatten, Dense, GlobalAveragePooling2D,  AveragePooling2D, Concatenate, concatenate
+from keras.layers import Dropout, Flatten, Dense, GlobalAveragePooling2D,  AveragePooling2D, Concatenate, concatenate, Input
 from keras import backend as K 
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler, TensorBoard, EarlyStopping
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler, Callback
 import numpy as np
-from sklearn.metrics import classification_report, confusion_matrix
 from random import shuffle 
-import pandas as pd
 import csv
 import cv2
 import os
 #import shelve
 import numpy.matlib
+from keras_vggface.vggface import VGGFace
+import time
+
 
 #train_data_dir = "data/train"
 #validation_data_dir = "data/val"
@@ -29,11 +30,8 @@ import numpy.matlib
 def customLoss(yTrue,yPred):
     return K.sum(K.log(yTrue) - K.log(yPred))
 
-
-
-
+#==== A function that compute softmax values for each sets of scores in x ======#
 def Mysoftmax(x):
-    """Compute softmax values for each sets of scores in x."""
     e_x = np.exp(x)
     ex_sum = np.sum(e_x, axis = 1)
     ex_sum_repeated = numpy.matlib.repmat(ex_sum,x.shape[1],1).T
@@ -47,14 +45,25 @@ def MyOneHotEncode(y,numClasses):
     y_OH[np.arange(y.shape[0]), y] = 1
     return y_OH
 
+#====== A function that soft encodes true labels using square difference ==========#
 def MySoftEncode(y,numClasses):
     y = np.asarray(y, dtype = float)
-    #y_soft = np.zeros((y.shape[0], numClasses))    
     r_i = np.arange(numClasses)
     y_repeated = numpy.matlib.repmat(y, numClasses, 1).T
     r_i_repeated = numpy.matlib.repmat(r_i,y.shape[0],1)
-    SquareDiff = -np.square(y_repeated - r_i_repeated)
-    y_soft = Mysoftmax(SquareDiff)
+
+    ### Square Difference
+    #SquareDiff = -np.square(y_repeated - r_i_repeated)
+    #y_soft = Mysoftmax(SquareDiff)
+    
+    ### Absoloute Difference
+    AbsDiff = -np.absolute(y_repeated - r_i_repeated)
+    y_soft = Mysoftmax(AbsDiff)
+    
+    ## Square log difference
+    #sqLogDiff = -np.square(np.log2(y_repeated+1)-np.log2(r_i_repeated+1))  
+    #y_soft = Mysoftmax(sqLogDiff)
+    
     return y_soft
 
 
@@ -66,9 +75,9 @@ def MyPrepareData (batch_IDs):
     for DataSetID, ImagePath, ImageID, ElevClass, AzimClass,_,_ in batch_IDs:
         FullFaceID = ImagePath+'/Face/'+'F'+ImageID
         Face_array = cv2.imread(FullFaceID)  # convert to array
-        #if Face_array == None:
-        #    print('can not read image '+os.path.join(ImagePath+'Face','F'+ImageID)+'\n')
-        #    continue
+        if Face_array is None:
+            print('============WARNING===========  \n CANNOT read image '+os.path.join(ImagePath+'Face','F'+ImageID)+'\n')
+            continue
         Left_array = cv2.imread(os.path.join(ImagePath,'Leye','L'+ImageID) ) 
         Right_array = cv2.imread(os.path.join(ImagePath,'Reye','R'+ImageID) ) 
         X_Face.append(cv2.resize(Face_array, (FaceResize, FaceResize))/255)  # resize to normalize data size and rescale it
@@ -83,7 +92,7 @@ def MyPrepareData (batch_IDs):
     
     #y_Elev = list(map(float, y_Elev))
     #y_Azim = list(map(float, y_Azim))
-    return X_Face, X_REye, X_LEye, y_Elev, y_Azim        
+    return X_Face, X_REye, X_LEye, y_Elev, y_Azim          
 
 
 # ==========  data generator function: yields batches of trainning data  ========== #
@@ -100,10 +109,10 @@ def MydataGeneratorTest(PathIDs, batch_size, samples_per_epoch):
     y_Azim_OH = MyOneHotEncode(y_Azim, numAzimClasses)
     
     if softLabels == 1:
-        y_Elev_OH = MySoftEncode(y_Elev, numElevClasses) # soft one hot encoding
+        y_Elev_OH = MySoftEncode(y_Elev, numElevClasses) # hard one hot encoding
         y_Azim_OH = MySoftEncode(y_Azim, numAzimClasses) 
     else:
-        y_Elev_OH = MyOneHotEncode(y_Elev, numElevClasses) # hard one hot encoding
+        y_Elev_OH = MyOneHotEncode(y_Elev, numElevClasses) # soft one hot encoding
         y_Azim_OH = MyOneHotEncode(y_Azim, numAzimClasses) 
         
     
@@ -137,19 +146,6 @@ def MydataGenerator(PathIDs, batch_size, samples_per_epoch):
             counter = 0
             shuffle(TrainIDs)
 
-
-# =========== Shelving function: to save all variables ==================#
-def MyShelf(ShelveFilename):
-    my_shelf = shelve.open(ShelveFilename,'n') # 'n' for new
-    for key in dir():
-        try:
-            my_shelf[key] = globals()[key]
-        except TypeError:
-            #
-            # __builtins__, my_shelf, and imported modules can not be shelved.
-            #
-            print('ERROR shelving: {0}'.format(key))
-    my_shelf.close()
 
 
 # ========== Accuracy calculation function ====================== #
@@ -186,8 +182,33 @@ def readIDfile(IDfile):
     
     shuffle(IDs)
     return IDs
-    
 
+
+# A callback function. I use it to calculate "val_acc" (average accuracies between the of elevAcc and AzimAcc). 
+# "val_acc" is needed to save the weights acheiving highest accuracy on validation data
+#Make sure to restart kernel first
+class ExtraLogInfo(Callback):
+    def on_epoch_begin(self, epoch, logs):
+        self.timed = time.time()
+
+        return
+
+    def on_epoch_end(self, epoch, logs):
+        print(logs.keys())
+        som_acc = 0.0
+        som_val_acc = 0.0
+        n_accs = 2#(len(logs) - 2) // 4
+        for i in range(n_accs):
+            acc_ptn = 'dense_{:d}_acc'.format(i+1)#'D{:d}_acc'.format(i)
+            val_acc_ptn = 'val_dense_{:d}_acc'.format(i+1) #'val_D{:d}_acc'.format(i) #'val_D{:d}_acc'.format(i)
+            som_acc += logs[acc_ptn]
+            som_val_acc += logs[val_acc_ptn]
+
+        logs['acc'] = som_acc / n_accs
+        logs['val_acc'] = som_val_acc / n_accs
+        logs['time'] = time.time() - self.timed
+
+        return
 
 #====================================================================================#
                   ######## Main Function #######################
@@ -199,12 +220,11 @@ def readIDfile(IDfile):
 #==== Data prep. Intializations ======#  
 #Categories = ["a- 4", "b- 1", "c- 8", "d- 2", "e- 13", "f- 5", "g- 9", "h- 11", "i- 6", "j- 20", "k- 19", "l- 18", "m- 21", "n- 17", "o- 16", "p- 14", "q- 3", "r- 7", "s- 10", "t- 12" ,"u- 15" ] 
 
-#======= File Pathes intializations =======##
-TrainIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/AugmentedNineDownFour.csv'
-ValIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseValCont2019-7-10.csv'
-TestIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseTest2019-7-10And11.csv'
-ShelveFilename = 'variables/run11.out'
-CheckpointFilePath = 'mySavedModels/run11.h5' 
+#======= File Pathes intializations =======#
+TrainIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseValCont2019-7-10.csv'#AugmentedNineV3.csv'
+ValIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/3.csv'#DenseNineValidV3.csv'
+TestIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/1.csv'#DenseNineTestV3.csv'
+CheckpointFilePath = 'mySavedModels/BestWeightsTest.h5' 
 checkPeriod = 1 #Period of saving weights
 ###======================================###
 
@@ -213,101 +233,100 @@ EyeResize = 64
 
 #==== Dense classificiation Parameters ======#
 numElevClasses = 14 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
-numAzimClasses = 33 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
+numAzimClasses = 38 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
 softLabels = 1 #transform the hard labels into soft ones to penalize errors differently 
 IsEyes = 1
 #===== Training Intializations =======#
-Epochs = 25#300  
-LayersToFreeze = 15
+Epochs = 7 
+LayersToFreeze_F = 25   #N.B: VGGface without the top includes 31 layers
+LayersToFreeze_E = 18  
 MyBatchSize = 32 
-ValSize = 1000
+ValSize = 20#1500
 lRate = 0.001
 #====== read Train, Validataion and test ID file amd Shuffle them =========#
 TrainIDs = readIDfile(TrainIdFile)
 samples_per_epoch = len(TrainIDs) #- numTestSam - ValSize # number of trainning samples
 
 ValIDs = readIDfile(ValIdFile)
+shuffle(ValIDs)
 ValIDs = ValIDs[0:ValSize]
 
 
 TestIDs = readIDfile(TestIdFile)
+shuffle(TestIDs)
 numTestSam = len(TestIDs)
 #====================================#
 
-SampleTestIDs = TestIDs[0:10]
-X_F_test_b, X_R_test_b, X_L_test_b, y_Elev_truth_b, y_Azim_truth_b = MyPrepareData (SampleTestIDs)
+#TestIDsBatch = TestIDs[0:10]
+#X_F_test_b, X_R_test_b, X_L_test_b, y_Elev_truth_b, y_Azim_truth_b = MyPrepareData (TestIDsBatch) #test values
+
 
 #============= Train and test data generators ========================# 
-[X_F_batch_test, X_R_batch_test, X_L_batch_test], [y_Elev_test, y_Azim_test] = MydataGeneratorTest(TrainIDs, MyBatchSize, samples_per_epoch)
+#[X_F_batch_test, X_R_batch_test, X_L_batch_test], [y_Elev_test, y_Azim_test] = MydataGeneratorTest(TrainIDs, MyBatchSize, samples_per_epoch)
 train_datagen = MydataGenerator(TrainIDs, MyBatchSize, samples_per_epoch)
 Val_generator = MydataGenerator(ValIDs, MyBatchSize, ValSize)
 #x, y = next(train_datagen)  ## for testing purposes
 
 
-
-#============== Create the face Network ==============================#
-model_F = applications.VGG16(weights = "imagenet", include_top=False, input_shape = (FaceResize, FaceResize, 3)) ##VGG network for face
-model_L = applications.VGG16(weights = "imagenet", include_top=False, input_shape = (EyeResize, EyeResize, 3)) ##VGG network for left Eye
-model_R = applications.VGG16(weights = "imagenet", include_top=False, input_shape = (EyeResize, EyeResize, 3)) ##VGG network for right Eye
+#============== Create the face, left_Eye, Right_Eye VGG models ==============================#
+model_F = VGGFace(include_top=False, input_shape=(FaceResize, FaceResize, 3)) #applications.VGG16(weights = "imagenet", include_top=False, input_shape = (FaceResize, FaceResize, 3)) ##VGG network for face
+model_L = VGGFace(include_top=False, input_shape=(EyeResize, EyeResize, 3)) #applications.VGG16(weights = "imagenet", include_top=False, input_shape = (EyeResize, EyeResize, 3)) ##VGG network for left Eye
+model_R = VGGFace(include_top=False, input_shape=(EyeResize, EyeResize, 3)) #applications.VGG16(weights = "imagenet", include_top=False, input_shape = (EyeResize, EyeResize, 3)) ##VGG network for right Eye
 
 # change the layers' names in left and right eyes network
 for i, layer in enumerate(model_L.layers):
     layer.name = layer.name + '_l'
 for i, layer in enumerate(model_R.layers):
-    layer.name = layer.name + '_r'
+    layer.name = layer.name + '_r'    
 
 # Freeze the layers which you don't want to train
-for layer in model_F.layers[:LayersToFreeze]:
+for layer in model_F.layers[:LayersToFreeze_F]:
     layer.trainable = False
-for layer in model_L.layers[:LayersToFreeze]:
+for layer in model_L.layers[:LayersToFreeze_E]:
     layer.trainable = False
-for layer in model_R.layers[:LayersToFreeze]:
+for layer in model_R.layers[:LayersToFreeze_E]:
     layer.trainable = False
+
+last_layer_F = model_F.get_layer('conv5_3').output
+last_layer_L = model_L.get_layer('conv5_3_l').output
+last_layer_R = model_R.get_layer('conv5_3_r').output
+
 
 # Global Average pooling layer at output of three networks
-modelOutF = model_F.output
-modelOutL = model_L.output
-modelOutR = model_R.output
-modelOutF = GlobalAveragePooling2D()(modelOutF) 
-modelOutL = GlobalAveragePooling2D()(modelOutL)
-modelOutR = GlobalAveragePooling2D()(modelOutR)
-
-
+modelOutF = GlobalAveragePooling2D()(last_layer_F) 
+modelOutL = GlobalAveragePooling2D()(last_layer_L)
+modelOutR = GlobalAveragePooling2D()(last_layer_R)
 
 # combine the output of the 3 branches
 modelOut = concatenate([modelOutF, modelOutL, modelOutR])
 
+ElevPredict = Dense(numElevClasses, activation="softmax")(modelOut)
+#ElevBranch = Dense(1024, activation="relu")(modelOut) # Elevation Angles head
+#ElevBranch = Dropout(0.4)(ElevBranch)
+#ElevPredict = Dense(numElevClasses, activation="softmax")(ElevBranch)
 
-ElevBranch = Dense(1024, activation="relu")(modelOut) # Elevation Angles head
-ElevBranch = Dropout(0.4)(ElevBranch)
-ElevPredict = Dense(numElevClasses, activation="softmax")(ElevBranch)
-
-AzimBranch = Dense(1024, activation="relu")(modelOut) # Azimuth Angles head
-AzimBranch = Dropout(0.4)(AzimBranch)
-AzimuthPredict = Dense(numAzimClasses, activation="softmax")(AzimBranch)
+#AzimBranch = Dense(1024, activation="relu")(modelOut) # Azimuth Angles head
+#AzimBranch = Dropout(0.4)(AzimBranch)
+AzimuthPredict = Dense(numAzimClasses, activation="softmax")(modelOut)
+#AzimuthPredict = Dense(numAzimClasses, activation="softmax")(AzimBranch)
 
 #model_final = Model(inputs = [model_F.input, model_L.input] , outputs = [ElevPredict, AzimuthPredict])
 model_final = Model(inputs = [model_F.input, model_L.input, model_R.input] , outputs = [ElevPredict, AzimuthPredict])
 #model_final = Model(inputs = [xFace.input, xLEye.input, xREye.input] , outputs = [ElevPredict, AzimuthPredict])
-plot_model(model_final, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+plot_model(model_final, to_file='model_plot_VGGFaceCorrect.png', show_shapes=True, show_layer_names=True)
 
 # use "sparse_categorical_crossentropy" when you have a non-encoded output
 model_final.compile(loss = 'categorical_crossentropy', optimizer = optimizers.Adam(lr=lRate), metrics=["accuracy"])
 
 print(model_final.summary())
 
-checkpoint = ModelCheckpoint(CheckpointFilePath, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', period=checkPeriod)
-
+ExtraLogInfoObject = ExtraLogInfo()
+checkpoint = ModelCheckpoint(CheckpointFilePath, monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='max', period=checkPeriod)
+#checkpoint = ModelCheckpoint(CheckpointFilePath, save_best_only=True, monitor='val_acc', save_weights_only=False, mode='max', period=checkPeriod)
 
 StepsPerEpoch = np.ceil(samples_per_epoch/MyBatchSize)
-model_final.fit_generator( train_datagen, steps_per_epoch = StepsPerEpoch, epochs = Epochs,  verbose=1, validation_data = Val_generator, nb_val_samples = ValSize, callbacks= [checkpoint])
 
-####train_generator = train_datagen.flow(Xtrain,Ytrain)
-#===== To evaluate the accuracy on this data after each epoch =====#
-#Xval = Xtest[:ValSize,:,:,:]
-#Yval = Ytest[:ValSize]
-#Val_generator = test_datagen.flow(Xval,Yval) 
-
+model_final.fit_generator( train_datagen, steps_per_epoch = StepsPerEpoch, epochs = Epochs,  verbose=1, validation_data = Val_generator, nb_val_samples = ValSize, callbacks= [ExtraLogInfoObject, checkpoint])
 
 # ========== Test in batch ============#
 num_t = int(np.floor(len(TestIDs)/MyBatchSize)) #number of test iterations
@@ -323,7 +342,6 @@ for i in range(num_t):
     [y_Elev_soft_b, y_Azim_soft_b] = model_final.predict([X_F_test_b, X_R_test_b, X_L_test_b]) # predictions for Test data
     y_Elev_soft[i*MyBatchSize:(i+1)*MyBatchSize,:] = y_Elev_soft_b
     y_Azim_soft[i*MyBatchSize:(i+1)*MyBatchSize,:] = y_Azim_soft_b
-    
     
 y_Elev_pred = np.argmax(y_Elev_soft, axis=1)
 y_Azim_pred = np.argmax(y_Azim_soft, axis=1)
@@ -343,7 +361,6 @@ print('Elevation Accuracy = ', ElevAccuracy, "\n")
 
 AzimAccuracy = AccuracyCal(y_Azim_truth, y_Azim_pred)
 print('Azimuth Accuracy = ', AzimAccuracy, "\n")      
-
 
 ## Elevation and Azimuth Accuracy for double resolution
 Elev_acc_2 = DoubleResAccuracy(y_Elev_truth, y_Elev_soft)

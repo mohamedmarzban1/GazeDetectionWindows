@@ -12,7 +12,8 @@ import csv
 import cv2
 import os
 from random import shuffle 
-
+from sklearn.metrics import confusion_matrix
+import scipy.io as sio
 
 
 # ===== A function that takes the batch IDs as inputs, extract images preprocess them and returns a numpy array and their Labels ===#
@@ -26,8 +27,13 @@ def MyPrepareData (batch_IDs):
         #if Face_array == None:
         #    print('can not read image '+os.path.join(ImagePath+'Face','F'+ImageID)+'\n')
         #    continue
-        Left_array = cv2.imread(os.path.join(ImagePath,'Leye','L'+ImageID) ) 
-        Right_array = cv2.imread(os.path.join(ImagePath,'Reye','R'+ImageID) ) 
+        Left_array =  cv2.imread(ImagePath+'/Leye/'+'L'+ImageID) 
+        Right_array = cv2.imread(ImagePath+'/Reye/'+'R'+ImageID)  
+        #Left_array = cv2.imread(os.path.join(ImagePath,'Leye','L'+ImageID) ) 
+        #Right_array = cv2.imread(os.path.join(ImagePath,'Reye','R'+ImageID) ) 
+        if (Face_array is None) or (Left_array is None) or (Right_array is None):
+            print('============WARNING===========  \n CANNOT read image '+FullFaceID+'\n')
+            continue
         X_Face.append(cv2.resize(Face_array, (FaceResize, FaceResize))/255)  # resize to normalize data size and rescale it
         X_LEye.append(cv2.resize(Left_array, (EyeResize, EyeResize))/255)  
         X_REye.append(cv2.resize(Right_array, (EyeResize, EyeResize))/255)
@@ -88,23 +94,30 @@ def AccHigestN(y_truth, y_pred_soft,N):
      
     return CorrCount/numTestSamples
     
-            
+        
 
 #### 
-SavedModel = 'mySavedModels/run15SimpleNetwork.h5'
-testDataSetFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseNineTestV3.csv'#DenseTest2019-5-30Fixed.csv'
+SavedModel = 'mySavedModels/x12run1.h5'
+testDataSetPath = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/X12/'
+testDatsSetFileName = 'TestDiffSubjectsFixedDiffMarkersX12.csv'#DenseTest2019-5-30Fixed.csv'
+
+testDataSetFile = testDataSetPath + '/' + testDatsSetFileName
+SaveMatFile = 'matFiles/AccVsRes'+testDatsSetFileName[:-3]+'mat'
+AccVsResFlag = 1
 
 FaceResize = 224
 EyeResize = 64
 MyBatchSize = 32
-NumUsedTest = 2000 # number of test samples
+#NumUsedTest = 2000 # number of test samples
 
 
 #==== Dense classificiation Parameters ======#
-numElevClasses = 14 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
-numAzimClasses = 38 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
+numElevClasses = 15 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
+numAzimClasses = 44 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
 softLabels = 1 #transform the hard labels into soft ones to penalize errors differently 
 IsEyes = 1
+
+
 
 # load model
 print('Started loading Model \n')
@@ -158,6 +171,9 @@ y_Azim_pred = np.argmax(y_Azim_soft, axis=1)
 y_Elev_pred = np.argmax(y_Elev_soft, axis=1)
 y_Azim_pred = np.argmax(y_Azim_soft, axis=1)
 
+confMatrix = confusion_matrix(y_Elev_truth,y_Elev_pred)
+print(confMatrix)
+
 ElevAccuracy = AccuracyCal(y_Elev_truth, y_Elev_pred)
 print('Elevation Accuracy = ', ElevAccuracy, "\n")
 
@@ -199,4 +215,32 @@ Elev_acc_highest7 = AccHigestN (y_Elev_truth, y_Elev_soft,7)
 print("Elevation Accuracy 14deg resolution = ", Elev_acc_highest7, "\n")
 
 Azim_acc_highest7 = AccHigestN (y_Azim_truth, y_Azim_soft,8)
-print("Azimuth Accuracy 12deg resolution = ", Azim_acc_highest7, "\n")
+print("Azimuth Accuracy 14deg resolution = ", Azim_acc_highest7, "\n")
+
+print("Unique Elev pred: ", np.unique(y_Elev_pred), "\n")
+
+print("Unique Azim pred: ", np.unique(y_Azim_pred), "\n")
+
+print("Unique Elev truth: ", np.unique(y_Elev_truth), "\n")
+
+print("Unique Azim truth: ", np.unique(y_Azim_truth), "\n")
+
+
+#============== Accuracy vs resolution ============================#
+if AccVsResFlag:
+    AccuracyElevArray = np.empty([numElevClasses,1], dtype = float)
+    AccuracyAzimArray = np.empty([numAzimClasses,1], dtype = float)
+    for i in range(numElevClasses):
+        AccuracyElevArray[i] = AccHigestN(y_Elev_truth, y_Elev_soft,i+1)
+    
+               
+    for i2 in range(numAzimClasses):
+        AccuracyAzimArray[i2] = AccHigestN(y_Azim_truth, y_Azim_soft,i2+1)
+                   
+sio.savemat(SaveMatFile,{'AccuracyElevArray':AccuracyElevArray,'AccuracyAzimArray':AccuracyAzimArray,'y_Elev_truth':y_Elev_truth,'y_Elev_soft':y_Elev_soft,'y_Azim_truth':y_Azim_truth,'y_Azim_soft':y_Azim_soft})
+
+
+
+
+
+

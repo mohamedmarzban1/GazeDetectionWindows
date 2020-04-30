@@ -38,8 +38,8 @@ def ConvertToSpherical_np(xyz):
 
 
 #================ Intialize Values ====================#
-FaceIDFileAndWriteLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-7-15/"#"C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-5-22/"
-OutputFilesReadLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/D2019-7-15/FixedGaze/"
+FaceIDFileAndWriteLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-10-03-02/"#"C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-5-22/"
+OutputFilesReadLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/D2019-10-03-02/FixedGaze/"
 FrameIndexNumber = 3 #   In image name, after which dash is the frame number located
 
 #IgnoreLabels = [17,18,20]

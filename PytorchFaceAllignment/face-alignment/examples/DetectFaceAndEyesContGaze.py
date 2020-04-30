@@ -29,9 +29,9 @@ def path_leaf(path): # extracts a file name from a given path
 ##########################################################################
 #============= intialize parameters =================================#
 ###########################################################################
-ImageReadLocation = 'G:/ContGazeImages/ContLabelledFace/2019-7-11'#'C:/AdasData/Labelled Face/LF 2018-10-14'
-InputIDfilePath = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/D2019-7-11/ContGaze/IntermContGazeAngles.csv'
-DataSet = 'CFE2019-7-11'
+ImageReadLocation = 'G:/ContGazeImages/ContLabelledFace/2019-11-20-001'#'C:/AdasData/Labelled Face/LF 2018-10-14'
+InputIDfilePath = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/D2019-11-20-001/ContGaze/IntermContGazeAngles.csv'
+DataSet = 'CFE2019-11-20-001'
 fileType = '.jpg'
 vCroppedS = 80   # start vertical pixel after the image was already cropped
 hCroppedS = 500 
@@ -41,7 +41,7 @@ WriteDir = 'G:/ContGazeImages/FaceAndEyes' #'C:/AdasData/FaceAndEyes'
 WriteLocation = WriteDir +'/' + DataSet #'C:/AdasData/FaceAndEyes/FE2018-12-1'
 FolderNames = ['Face', 'Leye', 'Reye']
 is2D = 0 #1:2D 0:3D
-FinalFormatIDFile = DataSet + 'AnglesIDfile.csv'
+FinalFormatIDFile =  'AnglesIDfileCurrBack.csv'
 FinalIDFilePath = WriteLocation + '/' + FinalFormatIDFile
 
 topMargin = 100 #Face Margins

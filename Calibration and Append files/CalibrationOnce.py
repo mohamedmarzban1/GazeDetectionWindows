@@ -10,9 +10,9 @@ import numpy as np
 import pickle
 
 #====== read ID file, Shuffle it, create pathes for train and test data sets =========#
-MyFileName = 'AprilBackCalib2019-6-20.csv'
-ReadLoc = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/calibration2019-6-20'
-OutputFileName = "BackCalibAll2019-6-20.pickle"
+MyFileName = 'AprilRoadRef.csv'
+ReadLoc = 'C:/UbuntuWinShare/refRoad'
+OutputFileName = "RefRoad2019-6-11.pickle"
 NULL_Marker = 2222
 #UniqueIDs = list(range(301,321+1))
 doorTags = [203, 277, 314, 316, 317, 318]

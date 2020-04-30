@@ -11,18 +11,18 @@ import numpy as np
 import pickle
 import rmsd
 
-XYZcurrent = np.array([[0.49042,-0.05, 0.204921], [0.584064, 0.306914, 0.108106], [0.850856, 0.022013, -0.0699648]])
+XYZcurrent = np.array([[0.5661,0.0327864, 0.243528], [0.617012, 0.388014, 0.0854373], [0.691728, -0.313644, 0.0731137], [0.787969, -0.321781, -0.00476555], [0.904381, -0.445258, -0.1777]])
 
 
-pickle_in = open("BackCalib2019-6-20.pickle","rb")
+pickle_in = open("../calibPickleFiles/MarkersAppended2019-6-20BackStandard.pickle","rb")
 labelIDsUni = pickle.load(pickle_in)
 print(labelIDsUni)
-XlabelUni = np.expand_dims(np.ravel(pickle.load(pickle_in))[np.array([4,8,13])-1].T, axis = 1)
-YlabelUni = np.expand_dims(np.ravel(pickle.load(pickle_in))[np.array([4,8,13])-1].T, axis = 1)
-ZlabelUni = np.expand_dims(np.ravel(pickle.load(pickle_in))[np.array([4,8,13])-1].T, axis =1)
+XlabelUni = pickle.load(pickle_in)[np.array([0,26,4,10,14])]#np.expand_dims(np.ravel(pickle.load(pickle_in))[np.array([0,26,4,10,14])-1].T, axis = 1)
+YlabelUni = pickle.load(pickle_in)[np.array([0,26,4,10,14])]#np.expand_dims(np.ravel(pickle.load(pickle_in))[np.array([0,26,4,10,14])-1].T, axis = 1)
+ZlabelUni = pickle.load(pickle_in)[np.array([0,26,4,10,14])]#np.expand_dims(np.ravel(pickle.load(pickle_in))[np.array([0,26,4,10,14])-1].T, axis =1)
 numElemLabel =  pickle.load(pickle_in)
 
-XYZref = np.hstack((XlabelUni,YlabelUni,ZlabelUni))
+XYZref = np.vstack((XlabelUni,YlabelUni,ZlabelUni)).T
 
 
 C_curr = rmsd.centroid (XYZcurrent)
@@ -36,7 +36,7 @@ R = rmsd.kabsch(XYZcurr_centered, XYZref_centered) # the optimal rotation matrix
 
 
 #XYZToBeTransformed = np.array([0.7853, 0.5651, 0.0606])
-XYZToBeTransformed = np.array([0.533068, -0.418022, -0.0693811])
+XYZToBeTransformed = np.array([0.566071, 0.502468, 0.0572864])
 
 XYZTransformed = np.matmul(XYZToBeTransformed - C_curr, R) + C_ref  
 print(XYZTransformed)

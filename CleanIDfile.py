@@ -13,8 +13,8 @@ import csv
 #####CHANGE 
 
 #===== Intialize parameters ============#
-FolderPath = "G:/ContGazeImages/FaceAndEyes/CFE2019-7-19"
-InputIdFilePath = FolderPath + "/AnglesIDfileBeforeLeftCleanning.csv"  #input
+FolderPath = "G:/ContGazeImages/FaceAndEyes/CFE2019-10-31"
+InputIdFilePath = FolderPath + "/AnglesIDfileNotCleaned.csv"  #input
 #=========================================
 
 ImageReadLocation = FolderPath + "/Leye" #Face" #input

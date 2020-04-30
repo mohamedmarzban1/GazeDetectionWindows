@@ -13,7 +13,6 @@ import os
 from random import shuffle 
 import re # for spliting with multiple delimeters
 import scipy.io as sio
-import numpy.matlib
 
 
 
@@ -23,22 +22,9 @@ def TemporalEstimation(y_soft):
     #numClasses = y_soft.shape[1]
     y_soft_predicted = np.average(y_soft, axis = 0) # predicted soft angle
     return y_soft_predicted
-
-# a function that performs temporal estimation through exponential forgetting factor weights
-def TempEstForgetFactor(y_soft, beta = 0.95):
-    num_frame = y_soft.shape[0] # num_frame = num_prev + 1
-    W_i = np.expand_dims (np.power(beta,np.arange(0, num_frame)), axis =0) # weights
-    W_i_sum = np.sum(W_i)
-    #W_i = np.matlib.repmat(W_i, numClasses, 1 ).T
-    y_soft_predicted = np.matmul(W_i,y_soft)/W_i_sum # predicted soft angle
-    return y_soft_predicted
-
-#====== A function that takes the imageID as input and outputs the image count ========= #
-def getImageCount(ImageID):
-    TmpSplit = ImageID.split("_c")
-    return int(TmpSplit[1].split("_f")[0]) 
     
- #======= A function that takes the imageID and the index of the previous temporal image and returns the new ID
+    
+  #======= A function that takes the imageID and the index of the previous temporal image and returns the new ID
 def getImageIDfromList(ImageID,ImageCount,i):
     if i == 0:
         return ImageID
@@ -49,7 +35,7 @@ def getImageIDfromList(ImageID,ImageCount,i):
                 print("GotImageFromList", '\n')
                 return ID_t[2]
 
-    print("==================== image Not found ====================================", '\n')
+    print("====================image Not found====================================", '\n')
     return 2
 
 #======= A function that takes the imageID and the index of the previous temporal image and returns the new ID
@@ -70,9 +56,8 @@ def getImageID(ImageID, ImageCount, i):
 def MyPrepareDataTemporal(elligibleImageID, num_prev):
     X_Face, X_LEye, X_REye = [], [], [] 
     y_Elev, y_Azim = [], [], 
-    #DataSetID, ImagePath, ImageID, ElevClass, AzimClass, Elev, Azim, ImageCount = elligibleImageID
-    DataSetID, ImagePath, ImageID, ElevClass, AzimClass, Elev, Azim = elligibleImageID
-    ImageCount = getImageCount(elligibleImageID)
+    DataSetID, ImagePath, ImageID, ElevClass, AzimClass, Elev, Azim, ImageCount = elligibleImageID
+    ImageCount = int(ImageCount)
     X_Face, X_LEye, X_REye = [], [], [] 
     y_Elev, y_Azim = [], [], 
     ImageIDList = []
@@ -182,12 +167,15 @@ SavedModel = 'mySavedModels/run15SimpleNetwork.h5'
 testDataSetFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseNineV3TestTemporalNotDownsampled.csv'  #DenseTemp2019-7-10.csv #DenseTest2019-5-30Fixed.csv'
 # a Non-downsampled ID file should be used here
 
+FaceResize = 224
+EyeResize = 64
+MyBatchSize = 32
 numTestSamples = 10000
 #========== temporal Correlation parameters ===============#
-num_prev = 20 # number of previous frames used to account for temporal correlation
-SaveFileName = 'LdSvdTemprun15Exp20Beta0.8'
+num_prev = 10 # number of previous frames used to account for temporal correlation
 ContDownSample = 4  # To make sure we don't test very similar frames (Each two franmes to be tested have to be at least ContDownSample frames apart)
-beta = 0.8
+SaveFileName = 'LoadSavedTemprun15Avg10v2'
+
 
 #======= Dense classificiation and temporal Parameters ==========#
 numElevClasses = 14 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
@@ -195,10 +183,6 @@ numAzimClasses = 38 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-
 softLabels = 1 #transform the hard labels into soft ones to penalize errors differently 
 IsEyes = 1
 fileTypes = '.jpg|.png'
-
-FaceResize = 224
-EyeResize = 64
-MyBatchSize = 32
 
 
 
@@ -222,7 +206,6 @@ y_Elev_truth, y_Azim_truth = [], []
 elligibleImageIDs = extractElligibleTemporalFrames(TestIDs, num_prev) 
 shuffle(elligibleImageIDs)
 NumIDs = min(numTestSamples, len(elligibleImageIDs))
-print("Number of Elligible IDs = ", NumIDs, "\n")
 elligibleImageIDs = elligibleImageIDs[0:NumIDs]
 numEligibleIDs = len(elligibleImageIDs)
 
@@ -242,8 +225,8 @@ y_Azim_soft = np.empty([numEligibleIDs, numAzimClasses])
 for i in range(numEligibleIDs):
     X_F_test_b, X_R_test_b, X_L_test_b, y_Elev_truth_b, y_Azim_truth_b, ImageIDList = MyPrepareDataTemporal(elligibleImageIDs[i], num_prev) # data of all the temporal segment
     [y_Elev_soft_b, y_Azim_soft_b] = model_final.predict([X_F_test_b, X_R_test_b, X_L_test_b]) # predicting values for all batch
-    y_Elev_soft_t[i] = TempEstForgetFactor(y_Elev_soft_b, beta)#TemporalEstimation(y_Elev_soft_b) # Predicted elevation angle estimation for the eligible frame after temporal combinning
-    y_Azim_soft_t[i] = TempEstForgetFactor(y_Azim_soft_b, beta)#TemporalEstimation(y_Azim_soft_b) # Predicted azimuth angle estimation for the eligible frame after temporal combinning
+    y_Elev_soft_t[i] = TemporalEstimation(y_Elev_soft_b) # Predicted elevation angle estimation for the eligible frame after temporal combinning
+    y_Azim_soft_t[i] = TemporalEstimation(y_Azim_soft_b) # Predicted azimuth angle estimation for the eligible frame after temporal combinning
     y_Elev_truth.append(float(y_Elev_truth_b[0]))
     y_Azim_truth.append(float(y_Azim_truth_b[0]))
     y_Elev_soft[i] = y_Elev_soft_b[0]
@@ -258,7 +241,7 @@ y_Elev_pred = np.argmax(y_Elev_soft, axis=1) # predicted Elevation Angle normall
 y_Azim_pred = np.argmax(y_Azim_soft, axis=1)
 
 
-sio.savemat(SaveFileName,{'y_Elev_truth':y_Elev_truth,'y_Elev_soft':y_Elev_soft,'y_Azim_truth':y_Azim_truth,'y_Azim_soft':y_Azim_soft, 'y_Elev_soft_t':y_Elev_soft_t, 'y_Azim_soft_t':y_Azim_soft_t, 'beta':beta})
+sio.savemat(SaveFileName,{'y_Elev_truth':y_Elev_truth,'y_Elev_soft':y_Elev_soft,'y_Azim_truth':y_Azim_truth,'y_Azim_soft':y_Azim_soft, 'y_Elev_soft_t':y_Elev_soft_t, 'y_Azim_soft_t':y_Azim_soft_t})
 
 
 # accuracy for temporal

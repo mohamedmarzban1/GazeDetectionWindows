@@ -45,7 +45,7 @@ def MyOneHotEncode(y,numClasses):
     y_OH[np.arange(y.shape[0]), y] = 1
     return y_OH
 
-#====== A function that soft encodes true labels using square difference ==========#
+#====== A function that soft encodes true labels using Absoloute difference ==========#
 def MySoftEncode(y,numClasses):
     y = np.asarray(y, dtype = float)
     r_i = np.arange(numClasses)
@@ -75,11 +75,12 @@ def MyPrepareData (batch_IDs):
     for DataSetID, ImagePath, ImageID, ElevClass, AzimClass,_,_ in batch_IDs:
         FullFaceID = ImagePath+'/Face/'+'F'+ImageID
         Face_array = cv2.imread(FullFaceID)  # convert to array
-        if Face_array is None:
+        Left_array = cv2.imread(os.path.join(ImagePath,'Leye','L'+ImageID) )  
+        Right_array = cv2.imread(os.path.join(ImagePath,'Reye','R'+ImageID) ) 
+        if (Face_array is None) or (Left_array is None) or (Right_array is None):
             print('============WARNING===========  \n CANNOT read image '+os.path.join(ImagePath+'Face','F'+ImageID)+'\n')
             continue
-        Left_array = cv2.imread(os.path.join(ImagePath,'Leye','L'+ImageID) ) 
-        Right_array = cv2.imread(os.path.join(ImagePath,'Reye','R'+ImageID) ) 
+
         X_Face.append(cv2.resize(Face_array, (FaceResize, FaceResize))/255)  # resize to normalize data size and rescale it
         X_LEye.append(cv2.resize(Left_array, (EyeResize, EyeResize))/255)  
         X_REye.append(cv2.resize(Right_array, (EyeResize, EyeResize))/255)
@@ -221,10 +222,10 @@ class ExtraLogInfo(Callback):
 #Categories = ["a- 4", "b- 1", "c- 8", "d- 2", "e- 13", "f- 5", "g- 9", "h- 11", "i- 6", "j- 20", "k- 19", "l- 18", "m- 21", "n- 17", "o- 16", "p- 14", "q- 3", "r- 7", "s- 10", "t- 12" ,"u- 15" ] 
 
 #======= File Pathes intializations =======#
-TrainIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/DenseValCont2019-7-10.csv'#AugmentedNineV3.csv'
-ValIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/3.csv'#DenseNineValidV3.csv'
-TestIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/1.csv'#DenseNineTestV3.csv'
-CheckpointFilePath = 'mySavedModels/BestWeightsTest.h5' 
+TrainIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/X12/TrainAllX12.csv'#AugmentedNineV3.csv'
+ValIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/X12/ValidAllX12.csv'#DenseNineValidV3.csv'
+TestIdFile = 'C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/X12/TestSameSubjectsContX12.csv'#DenseNineTestV3.csv'
+CheckpointFilePath = 'mySavedModels/x12run1.h5' 
 checkPeriod = 1 #Period of saving weights
 ###======================================###
 
@@ -232,25 +233,23 @@ FaceResize = 224
 EyeResize = 64
 
 #==== Dense classificiation Parameters ======#
-numElevClasses = 14 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
-numAzimClasses = 38 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
+numElevClasses = 15 #number of Elevation Angles classes, 1) theta<=-45 2) -45<theta<=-43 3) -43<theta<=-41 .... 47) 45<theta
+numAzimClasses = 44 #number of Azimuth Angles classes, 1) phi<=-90 2) -90<phi<=-88 3) -43<theta<=-41 .... 92) 90<phi
 softLabels = 1 #transform the hard labels into soft ones to penalize errors differently 
 IsEyes = 1
 #===== Training Intializations =======#
-Epochs = 7 
+Epochs = 50 
 LayersToFreeze_F = 25   #N.B: VGGface without the top includes 31 layers
 LayersToFreeze_E = 18  
 MyBatchSize = 32 
-ValSize = 20#1500
+ValSize = 1702
 lRate = 0.001
 #====== read Train, Validataion and test ID file amd Shuffle them =========#
-TrainIDs = readIDfile(TrainIdFile)
+TrainIDs = readIDfile(TrainIdFile) #shuffles data as well
 samples_per_epoch = len(TrainIDs) #- numTestSam - ValSize # number of trainning samples
 
-ValIDs = readIDfile(ValIdFile)
-shuffle(ValIDs)
+ValIDs = readIDfile(ValIdFile) #shuffles data as well
 ValIDs = ValIDs[0:ValSize]
-
 
 TestIDs = readIDfile(TestIdFile)
 shuffle(TestIDs)
@@ -316,7 +315,7 @@ model_final = Model(inputs = [model_F.input, model_L.input, model_R.input] , out
 plot_model(model_final, to_file='model_plot_VGGFaceCorrect.png', show_shapes=True, show_layer_names=True)
 
 # use "sparse_categorical_crossentropy" when you have a non-encoded output
-model_final.compile(loss = 'categorical_crossentropy', optimizer = optimizers.Adam(lr=lRate), metrics=["accuracy"])
+model_final.compile(loss = 'categorical_crossentropy', optimizer = optimizers.Adam(lr=lRate, decay=lRate/Epochs), metrics=["accuracy"])
 
 print(model_final.summary())
 
@@ -324,7 +323,7 @@ ExtraLogInfoObject = ExtraLogInfo()
 checkpoint = ModelCheckpoint(CheckpointFilePath, monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='max', period=checkPeriod)
 #checkpoint = ModelCheckpoint(CheckpointFilePath, save_best_only=True, monitor='val_acc', save_weights_only=False, mode='max', period=checkPeriod)
 
-StepsPerEpoch = np.ceil(samples_per_epoch/MyBatchSize)
+StepsPerEpoch = np.floor(samples_per_epoch/MyBatchSize) #np.ceil(samples_per_epoch/MyBatchSize)
 
 model_final.fit_generator( train_datagen, steps_per_epoch = StepsPerEpoch, epochs = Epochs,  verbose=1, validation_data = Val_generator, nb_val_samples = ValSize, callbacks= [ExtraLogInfoObject, checkpoint])
 

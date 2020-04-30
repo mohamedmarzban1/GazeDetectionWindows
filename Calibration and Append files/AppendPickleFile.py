@@ -8,25 +8,25 @@ import pickle
 import numpy as np
 
 
-pickle_in = open("../calibPickleFiles/BackCalibAll2019-6-20.pickle","rb")
-OutputFileName = "MarkersAppended2019-6-20.pickle"
+pickle_in = open("../calibPickleFiles/MarkersAppended2019-6-20BackStandard.pickle","rb")
+OutputFileName = "../calibPickleFiles/MarkersAppended2019-6-20BackStandardv2.pickle"
 labelIDsUni = pickle.load(pickle_in)
-XlabelUni = np.expand_dims(np.ravel(pickle.load(pickle_in)), axis = 1)
-YlabelUni = np.expand_dims(np.ravel(pickle.load(pickle_in)), axis = 1)
-ZlabelUni = np.expand_dims(np.ravel(pickle.load(pickle_in)), axis =1)
-numElemLabel =  pickle.load(pickle_in)
+XlabelUni = pickle.load(pickle_in)#np.expand_dims(np.ravel(pickle.load(pickle_in)), axis = 1)
+YlabelUni = pickle.load(pickle_in)#np.expand_dims(np.ravel(pickle.load(pickle_in)), axis = 1)
+ZlabelUni = pickle.load(pickle_in)#np.expand_dims(np.ravel(pickle.load(pickle_in)), axis =1)
+numElemLabel =  pickle.load(pickle_in)#pickle.load(pickle_in)
 
 # delete the labels with zero values
-labelIDsUni = np.delete(labelIDsUni,[4,10,26]) 
-XlabelUni = np.delete(XlabelUni,[4,10,26])
-YlabelUni = np.delete(YlabelUni,[4,10,26])
-ZlabelUni = np.delete(ZlabelUni,[4,10,26])
+#labelIDsUni = np.delete(labelIDsUni,[4,10,26]) 
+#XlabelUni = np.delete(XlabelUni,[4,10,26])
+#YlabelUni = np.delete(YlabelUni,[4,10,26])
+#ZlabelUni = np.delete(ZlabelUni,[4,10,26])
 
 
-newLabelIDs = [314, 316, 317, 321]
-Xnew = [1.15287, 1.19547, .5376698, 1.0777576]
-Ynew = [.6344, -1.39106, .614429, -.3633154]
-Znew = [-.36089, -.26, -.1447289, -.95447796]
+newLabelIDs = [206]
+Xnew = [0.4268444]
+Ynew = [0.6287]
+Znew = [-0.20702]
 
 #Stack saved and new data point 
 labelIDsUniUpdated = np.hstack((labelIDsUni,newLabelIDs))
@@ -41,12 +41,15 @@ XlabelUniSorted = XlabelUniUpdated[IndxSorted]
 YlabelUniSorted = YlabelUniUpdated[IndxSorted]
 ZlabelUniSorted = ZlabelUniUpdated[IndxSorted]
 
+numElemLabelUpdated = np.ones(31)*10
 
 pickle_out = open(OutputFileName,"wb")
 pickle.dump(labelIDsUniSorted, pickle_out)
 pickle.dump(XlabelUniSorted, pickle_out)
 pickle.dump(YlabelUniSorted, pickle_out)
 pickle.dump(ZlabelUniSorted, pickle_out)
+pickle.dump(numElemLabelUpdated, pickle_out)
+
 pickle_out.close()
 
 
@@ -54,3 +57,4 @@ print("detected IDs = ",labelIDsUniSorted)
 print("x = ",XlabelUniSorted)
 print("y = ",YlabelUniSorted)
 print("z= ",ZlabelUniSorted)
+

@@ -50,7 +50,7 @@ while(cap.isOpened() & ret2):
     #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     if frame is None:
-        count += 1
+        #count += 1 #shouldn't be incremented
         continue
     
     if cropFlag:

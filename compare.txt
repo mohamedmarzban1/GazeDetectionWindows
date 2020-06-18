@@ -1,0 +1,45 @@
+41,42c41,42
+< FaceIDFileAndWriteLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-11-20-001/"#"C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-5-22/"
+< OutputFilesReadLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/D2019-11-20-001/FixedGaze/"
+---
+> FaceIDFileAndWriteLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-10-03-02/"#"C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/FaceAndEyes/FE2019-5-22/"
+> OutputFilesReadLoc = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/D2019-10-03-02/FixedGaze/"
+44,45d43
+< faceFixedStart = 141510 
+< backFixedStart = 141840 
+48d45
+< backToFaceOffset = faceFixedStart - backFixedStart
+50c47
+< VisualizeFile = OutputFilesReadLoc+"visualize_framesT2.csv"
+---
+> VisualizeFile = OutputFilesReadLoc+"visualize_frames.csv"
+131,134c128,132
+<         FrameNumsV.append(int(FrameNumVisual)) 
+<         XsV.append(float(Xvisual))   ##XsV.append(Xvisual)
+<         YsV.append(float(Yvisual))   ##YsV.append(Yvisual)
+<         ZsV.append(float(Zvisual))   ##ZsV.append(Zvisual)
+---
+>         FrameNumsV.append(FrameNumVisual)
+>         ######## Translate OpenGl-visualize Coordinates to AprilTags Coordinates ######
+>         XsV.append(-float(Zvisual))   ##XsV.append(Xvisual)
+>         YsV.append(-float(Xvisual))   ##YsV.append(Yvisual)
+>         ZsV.append(float(Yvisual))   ##ZsV.append(Zvisual)
+143,148c141,143
+<         # here we added backToFaceOffset to map face frames to back ones
+<         BackframeNum = int(frameNum)-backToFaceOffset
+<         FrameNumindx = FrameNumsV.index(BackframeNum)
+<         Xcom.append(float(XsV[FrameNumindx])) 
+<         Ycom.append(float(YsV[FrameNumindx]))
+<         Zcom.append(float(ZsV[FrameNumindx]))
+---
+>         Xcom.append(float(XsV[frameNum])) 
+>         Ycom.append(float(YsV[frameNum]))
+>         Zcom.append(float(ZsV[frameNum]))
+190c185
+< csvfile = open (FaceIDFileAndWriteLoc+'/'+AnglesIdFileName, 'w+', newline="") 
+---
+> csvfile = open (FaceIDFileAndWriteLoc+'/'+AnglesIdFileName, 'w+') 
+194c189
+<     with open(FaceIDFileAndWriteLoc+'/'+AnglesIdFileName, 'a+', newline="") as csvfile:
+---
+>     with open(FaceIDFileAndWriteLoc+'/'+AnglesIdFileName, 'a+') as csvfile:

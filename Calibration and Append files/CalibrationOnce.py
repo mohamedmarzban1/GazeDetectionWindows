@@ -9,18 +9,18 @@ import csv
 import numpy as np
 import pickle
 
-#====== read ID file, Shuffle it, create pathes for train and test data sets =========#
 
-MyFileName = 'FaceCurrCalib2019-6-14.csv'
-ReadLoc = '../calib_files'
-OutputFileName = "FaceCurr2019-6-14.pickle"
+inputFileName = 'BackReference0.032.csv'
+ReadLoc = 'C:/UbuntuWinShare/refBack/'
+OutputFileName = "BackReference0.032Intialv2.pickle"
 NULL_Marker = 2222
 #UniqueIDs = list(range(301,321+1))
 doorTags = []
 TimeIncludeStart = np.array([[0,0]])  #Include frames between those times in door tags [min,sec]
-TimeIncludeEnd =  np.array([[2,49]])  
+TimeIncludeEnd =  np.array([[5,00]])  
 TagConsider = 100 # Consider only all tags above this value
-idFile = ReadLoc+'/'+MyFileName
+outdoorTag = 300
+idFile = ReadLoc+'/'+inputFileName
 
 #### ===== Read detection IDs, hamming distance error, x,y,z of the tag  from CSV ==== ####
 xCartesian = []
@@ -46,6 +46,8 @@ index = np.argwhere(TagIDs == NULL_Marker)
 TagIDs = np.delete(TagIDs, index) # remove the null marker from unique list of detected tags
 index2 =  np.argwhere(TagIDs < TagConsider)
 TagIDs = np.delete(TagIDs, index2) # remove the calibration tags in the car
+index3 = np.argwhere(TagIDs == outdoorTag)
+TagIDs = np.delete(TagIDs, index3) # remove outdoor tag
 
 ### === Transform the columns to numpy arrays ==== ####
 detIDs = np.array(detIDs) # All detected tags (column 1 in the AprilTag output)
@@ -161,11 +163,11 @@ print("number of detected tags for each ID is", numElem)
 
 # Save the data
 pickle_out = open(OutputFileName,"wb")
-pickle.dump(TagIDs, pickle_out)
-pickle.dump(xAvg, pickle_out)
-pickle.dump(yAvg, pickle_out)
-pickle.dump(zAvg, pickle_out)
-pickle.dump(numElem, pickle_out)
+pickle.dump(np.ravel(TagIDs), pickle_out)
+pickle.dump(np.ravel(xAvg), pickle_out)
+pickle.dump(np.ravel(yAvg), pickle_out)
+pickle.dump(np.ravel(zAvg), pickle_out)
+pickle.dump(np.ravel(numElem), pickle_out)
 pickle_out.close()
 
 

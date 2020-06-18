@@ -20,8 +20,8 @@ with open(idFile, "r") as csvfile:
         IDs.append(row)
         
 for row2 in IDs:
-    with open(writePath, 'a+') as csvfile:
+    with open(writePath, 'a+', newline="") as csvfile:
         filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)            
         filewriter.writerow(row2)
 
-
+csvfile.close()  

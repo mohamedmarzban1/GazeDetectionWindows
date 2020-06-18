@@ -8,8 +8,8 @@ import pickle
 import numpy as np
 
 
-pickle_in = open("../calibPickleFiles/MarkersAppended2019-6-20BackStandard.pickle","rb")
-OutputFileName = "../calibPickleFiles/MarkersAppended2019-6-20BackStandardv2.pickle"
+pickle_in = open("../calibPickleFiles/BackReference0.032Appended.pickle","rb")
+OutputFileName = "../calibPickleFiles/BackReference0.032Appendedv2.pickle"
 labelIDsUni = pickle.load(pickle_in)
 XlabelUni = pickle.load(pickle_in)#np.expand_dims(np.ravel(pickle.load(pickle_in)), axis = 1)
 YlabelUni = pickle.load(pickle_in)#np.expand_dims(np.ravel(pickle.load(pickle_in)), axis = 1)
@@ -22,11 +22,12 @@ numElemLabel =  pickle.load(pickle_in)#pickle.load(pickle_in)
 #YlabelUni = np.delete(YlabelUni,[4,10,26])
 #ZlabelUni = np.delete(ZlabelUni,[4,10,26])
 
-
-newLabelIDs = [206]
-Xnew = [0.4268444]
-Ynew = [0.6287]
-Znew = [-0.20702]
+[ 0.51101412 -1.15941086 -0.17225367]
+newLabelIDs = [318]#[206, 316, 317, 321]
+    
+Xnew = [0.51101412] #[0.34526502, 1.0121309, 0.40895749, 0.85777994]
+Ynew = [-1.15941086] #[0.48491659, -1.06747411, 0.68667606,  -0.28736424]
+Znew = [-0.17225367] #[-0.17995367, -0.26459174, 0.09926209, -0.76973065]
 
 #Stack saved and new data point 
 labelIDsUniUpdated = np.hstack((labelIDsUni,newLabelIDs))

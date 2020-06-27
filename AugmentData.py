@@ -27,10 +27,16 @@ def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
     Right_array = cv2.imread(os.path.join(ImagePath,'Reye','R'+ImageID) ) 
     
     row['ImagePath'] = AugmentedDataLoc
-    
-    Face_HSV = cv2.cvtColor(Face_array, cv2.COLOR_BGR2HSV)
-    Left_HSV = cv2.cvtColor(Left_array, cv2.COLOR_BGR2HSV)
-    Right_HSV = cv2.cvtColor(Right_array, cv2.COLOR_BGR2HSV)
+    try:
+        Face_HSV = cv2.cvtColor(Face_array, cv2.COLOR_BGR2HSV)
+        Left_HSV = cv2.cvtColor(Left_array, cv2.COLOR_BGR2HSV)
+        Right_HSV = cv2.cvtColor(Right_array, cv2.COLOR_BGR2HSV)
+    except:
+        file = open(ErrorFile, "a+") 
+        file.write("{}-     {} \n".format(ImagePath,ImageID))
+        file.close()
+        print("Warning: File ", ImagePath,"/",ImageID, "not found")
+        return  
     
     random_FaceCrop_coefficient = np.random.randint(low = 1, high = 5, size = num) ## generates random integer vales from 1 to 5
     random_EyeCrop_coefficient = np.random.randint(low = 1, high = 2, size = num) ## generates random integer vales from 1 to 3
@@ -76,7 +82,7 @@ def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
         cv2.imwrite(AbsWriteLocSubR + "/R" + ImageIDNew, Right_RGB) 
         
         count = count + 1
-        with open(NewAugmentedFile, 'a+') as csv_output:
+        with open(NewAugmentedFile, 'a+', newline="") as csv_output:
             filewriter = csv.writer(csv_output, delimiter='\t', quotechar='|', quoting=csv.QUOTE_MINIMAL)            
             filewriter.writerow(row)
     
@@ -84,9 +90,11 @@ def AugmentData(row, num, br_add, br_scale, sat_add, sat_scale):
     return 
 
 ###========== Intialize parameters ==============###
-InputFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/ElevenTrainX10.csv" ##input
-NewAugmentedFile = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/AugmentedElevenTrainX10.csv" ##output
-AugmentedDataLoc = "G:/AugmnetedHSVx10/"
+FilesPath = "C:/Users/mfm160330/OneDrive - The University of Texas at Dallas/ADAS data/OutputFiles/"
+InputFile = FilesPath + "/TrainSameSubjAllZ1.csv" ##input
+NewAugmentedFile = FilesPath + "/TrainAugmentedZ1.csv" ##output
+AugmentedDataLoc = "D:/Augmented_Z1/"
+ErrorFile = FilesPath + "/IamgesNotFound_Z1.txt"
 brightness_additive_max = 10
 brightness_scale_max = 0.05
 sat_add_max = 10
@@ -102,7 +110,7 @@ numRowsInput = AllLabeledImagesFile.shape[1]
 # ===============================================#
 
 #========= Create Augmented File and write header ===========#
-csv_output = open(NewAugmentedFile, 'w+')
+csv_output = open(NewAugmentedFile, 'w+', newline="")
 header = "DataSetID\tImagePath\tImageID\tElevClass\tAzimClass\tElev\tAzim\n"
 csv_output.write(header)
 
@@ -127,17 +135,15 @@ for indx in range(numRowsInput):
     Azim = float(row['Azim'])
     ElevClass = int(row['ElevClass'])
     AzimClass = int(row['AzimClass'])
-    if  MyListCheck ([35,36,42], AzimClass):
+    if  AzimClass == 2:
         num = 9
-    elif MyListCheck ([11,12,14], ElevClass):
+    elif MyListCheck ([21,22,23,24], ElevClass) or MyListCheck ([3,45,46], AzimClass):
         num = 6
-    elif MyListCheck ([1,39,40,41], AzimClass):
+    elif MyListCheck ([4,41,43], AzimClass):
         num = 4
-    elif ElevClass == 0 or  MyListCheck ([2], AzimClass):
+    elif MyListCheck ([1,2,7,20], ElevClass):
         num = 3
-    elif MyListCheck ([0,37,38], AzimClass):
-        num = 2
-    elif MyListCheck ([1,8,9,10,13], ElevClass) or MyListCheck ([3,4,5,6,33,34,43], AzimClass):
+    elif MyListCheck ([3,4,6,8,19], ElevClass):
         num = 1
     else:
         num = 0
